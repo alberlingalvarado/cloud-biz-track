@@ -14,7 +14,6 @@ function estadoVacio(){
 }
 
 export function initGestion(initialState, onSave){
-const ES_LOCAL = ["localhost","127.0.0.1"].includes(location.hostname);
 const DIAS_LIMITE = 30;
 let calEditId = null, cierreConfId = null, cierreEditId = null, errCat = null, perdidoEditId = null, perdidoConfId = null;
 
