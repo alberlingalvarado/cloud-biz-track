@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import "@/legacy/gestion.css";
+import { MARKUP as MARKUP_HTML, initGestion, estadoVacio } from "@/legacy/gestion";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -137,12 +138,10 @@ function App({ userId, email }: { userId: string; email: string }) {
   useEffect(() => {
     if (fase !== "lista" || iniciado.current) return;
     iniciado.current = true;
-    import("@/legacy/gestion").then(({ initGestion }) => initGestion(datos.current, onSave));
+    initGestion(datos.current, onSave);
   }, [fase]);
 
   const empezar = async (inicial: Estado) => {
-    const { initGestion: _i, ...rest } = {} as any; void _i; void rest;
-    const { estadoVacio } = await import("@/legacy/gestion");
     const s = { ...estadoVacio(), ...inicial, config: { ...estadoVacio().config, ...(inicial.config || {}) } };
     await guardar(s);
     datos.current = s;
@@ -183,5 +182,3 @@ function App({ userId, email }: { userId: string; email: string }) {
   );
   return <>{barra}<div suppressHydrationWarning dangerouslySetInnerHTML={{ __html: MARKUP_HTML }} /></>;
 }
-
-import { MARKUP as MARKUP_HTML } from "@/legacy/gestion";
