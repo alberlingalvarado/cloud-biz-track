@@ -14,7 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      gestion_datos: {
+        Row: {
+          calificados: Json
+          cats: Json
+          cierres: Json
+          config: Json
+          entrantes: Json
+          errores: Json
+          llamadas_realizadas: Json
+          metas: Json
+          perdidos: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          calificados?: Json
+          cats?: Json
+          cierres?: Json
+          config?: Json
+          entrantes?: Json
+          errores?: Json
+          llamadas_realizadas?: Json
+          metas?: Json
+          perdidos?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          calificados?: Json
+          cats?: Json
+          cierres?: Json
+          config?: Json
+          entrantes?: Json
+          errores?: Json
+          llamadas_realizadas?: Json
+          metas?: Json
+          perdidos?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
