@@ -20,7 +20,8 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-type Estado = Record<string, any>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Estado = any;
 
 function aFila(s: Estado, userId: string) {
   return {
