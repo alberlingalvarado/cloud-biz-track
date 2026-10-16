@@ -54,15 +54,24 @@ function deFila(r: any): Estado {
 
 function Index() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
+  const actual = useRef<string | null>(null);
   useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const aplicar = (s: Session | null) => {
+      const id = s?.user.id ?? null;
+      // Evita volver a renderizar al refrescarse el token: solo cambia si cambia la cuenta.
+      if (actual.current === id && id !== null) return;
+      actual.current = id;
+      setSession(s);
+    };
+    const { data } = supabase.auth.onAuthStateChange((_e, s) => aplicar(s));
+    supabase.auth.getSession().then(({ data }) => aplicar(data.session));
     return () => data.subscription.unsubscribe();
   }, []);
   if (session === undefined) return <main><p className="meta">Cargando…</p></main>;
   if (!session) return <Acceso />;
   return <App key={session.user.id} userId={session.user.id} email={session.user.email ?? ""} />;
 }
+
 
 function Acceso() {
   const [modo, setModo] = useState<"entrar" | "registro">("entrar");
