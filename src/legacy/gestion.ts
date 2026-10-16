@@ -45,10 +45,10 @@ function save(){ onSave(state); }
 /* Pasa a perdidos los calificados con más de 30 días sin pago */
 function revisarVencidos(){
   const hoy = hoyISO();
-  const vencidos = state.calificados.filter(c => diasEntre(c.fecha, hoy) >= DIAS_LIMITE);
+  const vencidos = state.calificados.filter(c => !c.estado && diasEntre(c.fecha, hoy) >= DIAS_LIMITE);
   if (!vencidos.length) return;
   vencidos.forEach(c => state.perdidos.push({id:c.id, fecha:c.fecha, fechaPerdido:hoy, nombre:c.nombre, link:c.link, hubspot:c.hubspot, plan:c.plan, notas:c.notas || []}));
-  state.calificados = state.calificados.filter(c => diasEntre(c.fecha, hoy) < DIAS_LIMITE);
+  vencidos.forEach(c => { c.estado = "perdido"; c.fechaEstado = hoy; });
   save();
 }
 
@@ -149,12 +149,24 @@ document.getElementById("cal-add").onclick = () => {
 function renderCalificados(){
   revisarVencidos();
   const hoy = hoyISO();
-  const act = state.calificados.slice().sort((a,b) => a.fecha.localeCompare(b.fecha));
-  document.getElementById("cal-count").textContent = act.length;
-  document.getElementById("cal-hoy").textContent = act.filter(c => c.fecha === hoy).length;
+  const act = state.calificados.slice().sort((a,b) => (a.estado ? 1 : 0) - (b.estado ? 1 : 0) || a.fecha.localeCompare(b.fecha));
+  document.getElementById("cal-count").textContent = act.filter(c => !c.estado).length + " pendientes";
+  document.getElementById("cal-hoy").textContent = contarCalificados(hoy);
   document.getElementById("cal-list").innerHTML = act.length ? act.map(c => {
     const dias = diasEntre(c.fecha, hoy);
     const restantes = DIAS_LIMITE - dias;
+    if (c.estado) return `
+    <div class="item" style="opacity:.75">
+      <div style="flex:1">
+        <div style="font-size:16px;font-weight:700">${fmt(c.fecha)} - ${esc(c.nombre || "Sin nombre")} · <span class="${c.estado === 'perdido' ? 'danger' : ''}">${c.estado === "ganado" ? "✅ Cierre ganado" : "❌ Cierre perdido"} ${fmt(c.fechaEstado)}</span></div>
+        <div class="meta"><a href="${esc(c.link)}" target="_blank" rel="noopener">${esc(c.link)}</a></div>
+        <div class="meta">Plan: ${esc(c.plan || "—")} · Monto: ${money(c.monto)}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button class="small" disabled>Cerrado</button>
+        <button class="small" data-delc="${c.id}">Eliminar</button>
+      </div>
+    </div>`;
     const pagoHoy = c.pagoFecha && c.pagoFecha <= hoy;
     const conf = cierreConfId === c.id ? `
       <div class="inline">
@@ -231,12 +243,21 @@ function renderCalificados(){
       plan: document.getElementById("conf-plan").value.trim(),
       monto: Number(document.getElementById("conf-monto").value) || 0,
       periodicidad: document.getElementById("conf-period").value,
-      descuento: document.getElementById("conf-desc").value.trim()
+      descuento: document.getElementById("conf-desc").value.trim(),
+      calId: c.id
     });
-    state.calificados = state.calificados.filter(x => x.id !== c.id);
+    c.estado = "ganado"; c.fechaEstado = hoyISO();
     cierreConfId = null;
     save(); renderCalificados();
   });
+}
+
+/* Calificados de una fecha: incluye los que ya pasaron a cierre (ganado o perdido) */
+function contarCalificados(f){
+  const ids = new Set(state.calificados.map(c => c.id));
+  return state.calificados.filter(c => c.fecha === f).length
+    + state.cierres.filter(c => !c.calId && c.fechaCalificacion === f).length
+    + state.perdidos.filter(p => !ids.has(p.id) && p.fecha === f).length;
 }
 
 /* CIERRES */
@@ -517,8 +538,10 @@ function sheetsFor(){
   sheets["Calificados"] = {headers:["Fecha calificación","Nombre cliente","Link contacto","HubSpot negocio","Fecha pago tentativo","Plan","Recordatorio","Notas de seguimiento"],
     rows: state.calificados.slice().sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(c => [c.fecha, c.nombre || "", c.link, c.hubspot, c.pagoFecha, c.plan, c.recordatorio, (c.notas || []).map(n => fmt(n.fecha) + ": " + n.texto).join(" | ")])};
   const porDia = {};
-  state.calificados.forEach(c => porDia[c.fecha] = (porDia[c.fecha] || 0) + 1);
-  state.cierres.forEach(c => { if (c.fechaCalificacion) porDia[c.fechaCalificacion] = (porDia[c.fechaCalificacion] || 0) + 0; });
+  state.calificados.forEach(c => porDia[c.fecha] = 0);
+  state.cierres.forEach(c => { if (c.fechaCalificacion) porDia[c.fechaCalificacion] = 0; });
+  state.perdidos.forEach(p => { if (p.fecha) porDia[p.fecha] = 0; });
+  Object.keys(porDia).forEach(f => porDia[f] = contarCalificados(f));
   sheets["Conteo diario"] = {headers:["Fecha","Calificados"],
     rows: Object.keys(porDia).sort().map(f => [f, porDia[f]])};
   sheets["Cierres ganados"] = {headers:["Fecha de pago","Fecha de registro","Nombre cliente","Fecha calificación","Link contacto","HubSpot negocio","Plan","Monto final","Periodicidad","Descuento","Notas"],
@@ -594,7 +617,7 @@ function renderResumenDia(){
   const sop = ent.filter(e => e.tipo === "Soporte").length;
   const err = state.errores.filter(e => e.fecha === hoy);
   const errReg = err.filter(e => e.categoria === "Registro por error").length;
-  const cal = state.calificados.filter(c => c.fecha === hoy).length;
+  const cal = contarCalificados(hoy);
   const cierres = state.cierres.filter(c => c.fechaCierre === hoy);
   const montoCierres = cierres.reduce((s,c) => s + neto(c), 0);
   const perd = state.perdidos.filter(p => p.fechaPerdido === hoy).length;
