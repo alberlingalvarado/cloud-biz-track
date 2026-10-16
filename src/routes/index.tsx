@@ -118,16 +118,20 @@ function Acceso() {
 
 function App({ userId, email }: { userId: string; email: string }) {
   const [fase, setFase] = useState<"cargando" | "primera" | "lista">("cargando");
-  const [estadoGuardado, setEstadoGuardado] = useState("");
   const datos = useRef<Estado>({});
   const iniciado = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendiente = useRef<Estado | null>(null);
+  const aviso = useRef<HTMLSpanElement | null>(null);
+
+  // El aviso se escribe directo en el DOM: así la app no se vuelve a dibujar
+  // al guardar y nunca se pierden los botones de las pestañas.
+  const setAviso = (t: string) => { if (aviso.current) aviso.current.textContent = t ? " · " + t : ""; };
 
   const guardar = async (s: Estado) => {
-    setEstadoGuardado("Guardando…");
+    setAviso("Guardando…");
     const { error } = await supabase.from("gestion_datos").upsert(aFila(s, userId) as any);
-    setEstadoGuardado(error ? "No se pudo guardar en la nube" : "Guardado en la nube");
+    setAviso(error ? "No se pudo guardar en la nube" : "Guardado en la nube");
   };
   const onSave = (s: Estado) => {
     pendiente.current = JSON.parse(JSON.stringify(s));
@@ -145,11 +149,15 @@ function App({ userId, email }: { userId: string; email: string }) {
     return () => window.removeEventListener("beforeunload", flush);
   }, [userId]);
 
-  useEffect(() => {
-    if (fase !== "lista" || iniciado.current) return;
+  // Si React volviera a crear este contenedor, se reconstruye la app completa
+  // (markup + eventos), en lugar de quedar con botones muertos.
+  const montar = (nodo: HTMLDivElement | null) => {
+    if (!nodo || nodo.dataset["listo"] === "1") return;
+    nodo.dataset["listo"] = "1";
+    nodo.innerHTML = MARKUP_HTML;
     iniciado.current = true;
     initGestion(datos.current, onSave);
-  }, [fase]);
+  };
 
   const empezar = async (inicial: Estado) => {
     const s = { ...estadoVacio(), ...inicial, config: { ...estadoVacio().config, ...(inicial.config || {}) } };
@@ -170,7 +178,7 @@ function App({ userId, email }: { userId: string; email: string }) {
 
   const barra = (
     <div className="meta" style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, padding: "8px 16px 0" }}>
-      <span>{email}{estadoGuardado ? " · " + estadoGuardado : ""}</span>
+      <span>{email}<span ref={aviso} /></span>
       <button className="small" onClick={salir}>Cerrar sesión</button>
     </div>
   );
@@ -190,5 +198,6 @@ function App({ userId, email }: { userId: string; email: string }) {
       </main>
     </>
   );
-  return <>{barra}<div suppressHydrationWarning dangerouslySetInnerHTML={{ __html: MARKUP_HTML }} /></>;
+  return <>{barra}<div suppressHydrationWarning ref={montar} /></>;
 }
+
