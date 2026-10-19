@@ -2,7 +2,11 @@
 /* Lógica original de "Gestión diaria" (sin cambios en reglas de negocio). */
 import * as XLSX from "xlsx";
 
-export const MARKUP = "<header>\n  <h1>Gestión diaria</h1>\n  <span class=\"meta\" id=\"hoy\"></span>\n</header>\n<nav>\n  <button data-tab=\"errores\" class=\"active\">Errores de marcación</button>\n  <button data-tab=\"calificados\">Calificados</button>\n  <button data-tab=\"cierres\">Cierres</button>\n  <button data-tab=\"comisiones\">Comisiones</button>\n  <button data-tab=\"entrantes\">Llamadas entrantes</button>\n  <button data-tab=\"exportar\">Exportar al cierre del día</button>\n</nav>\n<main>\n\n<!-- ERRORES -->\n<section id=\"tab-errores\">\n  <div class=\"card\">\n    <h2>Registrar contacto con error</h2>\n    <div class=\"row\">\n      <input id=\"err-link\" placeholder=\"Link del contacto (HubSpot o Genesys)\">\n      <input id=\"err-campana\" placeholder=\"Campaña de donde vino\">\n    </div>\n    <div class=\"chips\" id=\"err-cats\"></div>\n    <div class=\"row\">\n      <input id=\"err-nota\" placeholder=\"Nota opcional\">\n      <button class=\"primary\" id=\"err-add\">Guardar</button>\n    </div>\n    <div class=\"row\" style=\"margin-top:10px\">\n      <input id=\"cat-new\" placeholder=\"Nueva categoría (crea su propia hoja)\">\n      <button id=\"cat-add\">Añadir categoría</button>\n    </div>\n  </div>\n  <div class=\"card\">\n    <h2>Registros de hoy <span class=\"count\" id=\"err-count\"></span></h2>\n    <div id=\"err-list\"></div>\n  </div>\n</section>\n\n<!-- CALIFICADOS -->\n<section id=\"tab-calificados\" class=\"hidden\">\n  <div class=\"card\">\n    <h2 id=\"cal-titulo\">Nuevo calificado</h2>\n    <div class=\"row\">\n      <label class=\"meta\" style=\"flex:1\">Fecha de calificación<input id=\"cal-calif\" type=\"date\" style=\"margin-top:4px\"></label>\n      <input id=\"cal-nombre\" placeholder=\"Nombre del cliente\">\n    </div>\n    <div class=\"row\" style=\"margin-top:8px\">\n      <input id=\"cal-link\" placeholder=\"Link del contacto\">\n      <input id=\"cal-hubspot\" placeholder=\"Link del negocio en HubSpot\">\n    </div>\n    <div class=\"row\" style=\"margin-top:8px\">\n      <label class=\"meta\" style=\"flex:1\">Fecha de pago tentativo<input id=\"cal-fecha\" type=\"date\" style=\"margin-top:4px\"></label>\n      <input id=\"cal-plan\" placeholder=\"Plan (ej. Pyme)\">\n      <input id=\"cal-monto\" type=\"number\" min=\"0\" placeholder=\"Monto del plan\">\n    </div>\n    <div class=\"row\" style=\"margin-top:8px\">\n      <input id=\"cal-recordatorio\" placeholder=\"Recordatorio (ej. llamar el martes)\">\n    </div>\n    <div class=\"row\" style=\"margin-top:10px\">\n      <button class=\"primary\" id=\"cal-add\">Guardar calificado</button>\n      <button id=\"cal-cancelar\" class=\"hidden\">Cancelar edición</button>\n    </div>\n  </div>\n  <div class=\"card\">\n    <h2>Calificados hoy: <span id=\"cal-hoy\">0</span> <span class=\"count\" id=\"cal-count\"></span></h2>\n    <p class=\"meta\">Ordenados por fecha de calificación (los más antiguos primero). A los 30 días sin pago pasan a cierre perdido.</p>\n    <div id=\"cal-list\"></div>\n  </div>\n</section>\n\n<!-- CIERRES -->\n<section id=\"tab-cierres\" class=\"hidden\">\n  <div class=\"card\">\n    <h2>Comisiones</h2>\n    <div class=\"total\" id=\"tot-mes\">Este mes: 0</div>\n    <div class=\"meta\" id=\"tot-todos\">Total histórico: 0</div>\n  </div>\n  <div class=\"card\">\n    <h2>Cierres ganados <span class=\"count\" id=\"cie-count\"></span></h2>\n    <div id=\"cie-list\"></div>\n  </div>\n  <div class=\"card\">\n    <h2>Cierres perdidos <span class=\"count\" id=\"per-count\"></span></h2>\n    <p class=\"meta\">Calificados que pasaron 30 días sin pago.</p>\n    <div id=\"per-list\"></div>\n  </div>\n</section>\n\n<!-- COMISIONES -->\n<section id=\"tab-comisiones\" class=\"hidden\">\n  <div class=\"card\">\n    <div class=\"row\">\n      <label class=\"meta\">Mes<input id=\"com-mes\" type=\"month\"></label>\n      <label class=\"meta\">Meta del mes<input id=\"com-meta\" type=\"number\" min=\"0\"></label>\n    </div>\n    <div id=\"com-resumen\" style=\"margin-top:12px\"></div>\n  </div>\n  <div class=\"card\">\n    <h2>Reglas de comisión</h2>\n    <div class=\"row\">\n      <label class=\"meta\">Tramo 1 (% de meta)<input id=\"cfg-t1\" type=\"number\"></label>\n      <label class=\"meta\">Comisión tramo 1 (%)<input id=\"cfg-c1\" type=\"number\"></label>\n      <label class=\"meta\">Tramo 2 (% de meta)<input id=\"cfg-t2\" type=\"number\"></label>\n      <label class=\"meta\">Comisión tramo 2 (%)<input id=\"cfg-c2\" type=\"number\"></label>\n    </div>\n    <div class=\"row\" style=\"margin-top:8px\">\n      <label class=\"meta\">Acelerador anual (% sobre valor con descuento)<input id=\"cfg-acel\" type=\"number\" step=\"0.1\"></label>\n      <label class=\"meta\">Descuento anual sugerido (%)<input id=\"cfg-desc\" type=\"number\"></label>\n    </div>\n  </div>\n  <div class=\"card\">\n    <h2>Cierres del mes</h2>\n    <div id=\"com-tabla\"></div>\n  </div>\n</section>\n\n<!-- ENTRANTES -->\n<section id=\"tab-entrantes\" class=\"hidden\">\n  <div class=\"card\">\n    <h2>Llamadas realizadas hoy</h2>\n    <div class=\"row\">\n      <input id=\"ll-hoy\" type=\"number\" min=\"0\" placeholder=\"Cantidad de llamadas realizadas\">\n      <button class=\"primary\" id=\"ll-guardar\">Guardar</button>\n    </div>\n  </div>\n  <div class=\"card\">\n    <h2>Registrar llamada entrante</h2>\n    <div class=\"row\">\n      <input id=\"en-link\" placeholder=\"Link del contacto\">\n      <select id=\"en-tipo\"><option>Soporte</option><option>Sales</option></select>\n    </div>\n    <div class=\"row\" style=\"margin-top:8px\">\n      <label class=\"meta\">Horas en cola<input id=\"en-h\" type=\"number\" min=\"0\" placeholder=\"0\"></label>\n      <label class=\"meta\">Minutos en cola<input id=\"en-m\" type=\"number\" min=\"0\" max=\"59\" placeholder=\"0\"></label>\n      <button class=\"primary\" id=\"en-add\" style=\"align-self:flex-end\">Guardar</button>\n    </div>\n  </div>\n  <div class=\"card\">\n    <h2>Entrantes de hoy: <span id=\"en-hoy\">0</span></h2>\n    <div class=\"meta\" id=\"en-resumen\"></div>\n    <div id=\"en-list\" style=\"margin-top:8px\"></div>\n  </div>\n  <div class=\"card\">\n    <h2>Resumen por día</h2>\n    <div id=\"en-dias\"></div>\n  </div>\n</section>\n\n<!-- EXPORTAR -->\n<section id=\"tab-exportar\" class=\"hidden\">\n  <div class=\"card\">\n    <h2>Exportar a Google Sheets</h2>\n    <p class=\"meta\">Cada hoja se copia en su pestaña. Copia la hoja y pégala en Google Sheets, o descarga el CSV e impórtalo.</p>\n    <div class=\"card\">\n      <h2>Resumen del día</h2>\n      <p class=\"meta\">Copia este texto y pégalo en un solo documento.</p>\n      <textarea id=\"res-texto\" rows=\"11\" readonly></textarea>\n      <div style=\"margin-top:8px\"><button class=\"primary\" id=\"res-copiar\">Copiar resumen</button></div>\n      <div class=\"row\" style=\"margin-top:10px\">\n        <button class=\"primary\" data-xl=\"dia\">Excel del día</button>\n        <button class=\"primary\" data-xl=\"semana\">Excel de la semana</button>\n        <button data-xl=\"todo\">Excel completo</button>\n      </div>\n      <div style=\"margin-top:10px\"><button id=\"json-bk\">Descargar respaldo .json</button></div>\n      <div style=\"margin-top:8px\"><label class=\"meta\">Restaurar desde respaldo .json <input id=\"json-rs\" type=\"file\" accept=\".json,application/json\"></label></div>\n    </div>\n    <div id=\"exp-list\"></div>\n  </div>\n</section>\n</main>";
+export const MARKUP = "<header>\n  <h1>Gestión diaria</h1>\n  <span class=\"meta\" id=\"hoy\"></span>\n</header>\n<nav>\n  <button data-tab=\"errores\" class=\"active\">Errores de marcación</button>\n  <button data-tab=\"calificados\">Calificados</button>\n  <button data-tab=\"cierres\">Cierres</button>\n  <button data-tab=\"comisiones\">Comisiones</button>\n  <button data-tab=\"entrantes\">Llamadas entrantes</button>\n  <button data-tab=\"exportar\">Exportar al cierre del día</button>\n</nav>\n<main>\n\n<!-- ERRORES -->\n<section id=\"tab-errores\">\n  <div class=\"card\">\n    <h2>Registrar contacto con error</h2>\n    <div class=\"row\">\n      <input id=\"err-link\" placeholder=\"Link del contacto (HubSpot o Genesys)\">\n      <input id=\"err-campana\" placeholder=\"Campaña de donde vino\">\n    </div>\n    <div class=\"chips\" id=\"err-cats\"></div>\n    <div class=\"row\">\n      <input id=\"err-nota\" placeholder=\"Nota opcional\">\n      <button class=\"primary\" id=\"err-add\">Guardar</button>\n    </div>\n    <div class=\"row\" style=\"margin-top:10px\">\n      <input id=\"cat-new\" placeholder=\"Nueva categoría (crea su propia hoja)\">\n      <button id=\"cat-add\">Añadir categoría</button>\n    </div>\n  </div>\n  <div class=\"card\">\n    <h2>Registros de hoy <span class=\"count\" id=\"err-count\"></span></h2>\n    <div id=\"err-list\"></div>\n  </div>\n</section>\n\n<!-- CALIFICADOS -->\n<section id=\"tab-calificados\" class=\"hidden\">\n  <div class=\"card\">\n    <h2 id=\"cal-titulo\">Nuevo calificado</h2>\n    <div class=\"row\">\n      <label class=\"meta\" style=\"flex:1\">Fecha de calificación<input id=\"cal-calif\" type=\"date\" style=\"margin-top:4px\"></label>\n      <input id=\"cal-nombre\" placeholder=\"Nombre del cliente\">\n    </div>\n    <div class=\"row\" style=\"margin-top:8px\">\n      <input id=\"cal-link\" placeholder=\"Link del contacto\">\n      <input id=\"cal-hubspot\" placeholder=\"Link del negocio en HubSpot\">\n    </div>\n    <div class=\"row\" style=\"margin-top:8px\">\n      <label class=\"meta\" style=\"flex:1\">Fecha de pago tentativo<input id=\"cal-fecha\" type=\"date\" style=\"margin-top:4px\"></label>\n      <input id=\"cal-plan\" placeholder=\"Plan (ej. Pyme)\">\n      <input id=\"cal-monto\" type=\"number\" min=\"0\" placeholder=\"Monto del plan\">\n    </div>\n    <div class=\"row\" style=\"margin-top:8px\">\n      <input id=\"cal-recordatorio\" placeholder=\"Recordatorio (ej. llamar el martes)\">\n    </div>\n    <div class=\"row\" style=\"margin-top:10px\">\n      <button class=\"primary\" id=\"cal-add\">Guardar calificado</button>\n      <button id=\"cal-cancelar\" class=\"hidden\">Cancelar edición</button>\n    </div>\n  </div>\n  <div class=\"card\">\n    <h2>Calificados hoy: <span id=\"cal-hoy\">0</span> <span class=\"count\" id=\"cal-count\"></span></h2>\n    <p class=\"meta\">Ordenados por fecha de calificación (los más antiguos primero). A los 30 días sin pago pasan a cierre perdido.</p>\n    
+    <div class=\"buscar\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><circle cx=\"11\" cy=\"11\" r=\"7\"></circle><line x1=\"16.5\" y1=\"16.5\" x2=\"21\" y2=\"21\"></line></svg><input id=\"cal-buscar\" type=\"search\" placeholder=\"Buscar por nombre\" autocomplete=\"off\"><button class=\"small hidden\" id=\"cal-buscar-x\">Quitar</button></div>
+    <p class=\"meta hidden\" id=\"cal-match\"></p><div id=\"cal-list\"></div>\n  </div>\n</section>\n\n<!-- CIERRES -->\n<section id=\"tab-cierres\" class=\"hidden\">\n  <div class=\"card\">\n    <h2>Comisiones</h2>\n    <div class=\"total\" id=\"tot-mes\">Este mes: 0</div>\n    <div class=\"meta\" id=\"tot-todos\">Total histórico: 0</div>
+    <div class=\"buscar\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><circle cx=\"11\" cy=\"11\" r=\"7\"></circle><line x1=\"16.5\" y1=\"16.5\" x2=\"21\" y2=\"21\"></line></svg><input id=\"cie-buscar\" type=\"search\" placeholder=\"Buscar por nombre (ganados y perdidos)\" autocomplete=\"off\"><button class=\"small hidden\" id=\"cie-buscar-x\">Quitar</button></div>
+    <p class=\"meta hidden\" id=\"cie-match\"></p>\n  </div>\n  <div class=\"card\">\n    <h2>Cierres ganados <span class=\"count\" id=\"cie-count\"></span></h2>\n    <div id=\"cie-list\"></div>\n  </div>\n  <div class=\"card\">\n    <h2>Cierres perdidos <span class=\"count\" id=\"per-count\"></span></h2>\n    <p class=\"meta\">Calificados que pasaron 30 días sin pago.</p>\n    <div id=\"per-list\"></div>\n  </div>\n</section>\n\n<!-- COMISIONES -->\n<section id=\"tab-comisiones\" class=\"hidden\">\n  <div class=\"card\">\n    <div class=\"row\">\n      <label class=\"meta\">Mes<input id=\"com-mes\" type=\"month\"></label>\n      <label class=\"meta\">Meta del mes<input id=\"com-meta\" type=\"number\" min=\"0\"></label>\n    </div>\n    <div id=\"com-resumen\" style=\"margin-top:12px\"></div>\n  </div>\n  <div class=\"card\">\n    <h2>Reglas de comisión</h2>\n    <div class=\"row\">\n      <label class=\"meta\">Tramo 1 (% de meta)<input id=\"cfg-t1\" type=\"number\"></label>\n      <label class=\"meta\">Comisión tramo 1 (%)<input id=\"cfg-c1\" type=\"number\"></label>\n      <label class=\"meta\">Tramo 2 (% de meta)<input id=\"cfg-t2\" type=\"number\"></label>\n      <label class=\"meta\">Comisión tramo 2 (%)<input id=\"cfg-c2\" type=\"number\"></label>\n    </div>\n    <div class=\"row\" style=\"margin-top:8px\">\n      <label class=\"meta\">Acelerador anual (% sobre valor con descuento)<input id=\"cfg-acel\" type=\"number\" step=\"0.1\"></label>\n      <label class=\"meta\">Descuento anual sugerido (%)<input id=\"cfg-desc\" type=\"number\"></label>\n    </div>\n  </div>\n  <div class=\"card\">\n    <h2>Cierres del mes</h2>\n    <div id=\"com-tabla\"></div>\n  </div>\n</section>\n\n<!-- ENTRANTES -->\n<section id=\"tab-entrantes\" class=\"hidden\">\n  <div class=\"card\">\n    <h2>Llamadas realizadas hoy</h2>\n    <div class=\"row\">\n      <input id=\"ll-hoy\" type=\"number\" min=\"0\" placeholder=\"Cantidad de llamadas realizadas\">\n      <button class=\"primary\" id=\"ll-guardar\">Guardar</button>\n    </div>\n  </div>\n  <div class=\"card\">\n    <h2>Registrar llamada entrante</h2>\n    <div class=\"row\">\n      <input id=\"en-link\" placeholder=\"Link del contacto\">\n      <select id=\"en-tipo\"><option>Soporte</option><option>Sales</option></select>\n    </div>\n    <div class=\"row\" style=\"margin-top:8px\">\n      <label class=\"meta\">Horas en cola<input id=\"en-h\" type=\"number\" min=\"0\" placeholder=\"0\"></label>\n      <label class=\"meta\">Minutos en cola<input id=\"en-m\" type=\"number\" min=\"0\" max=\"59\" placeholder=\"0\"></label>\n      <button class=\"primary\" id=\"en-add\" style=\"align-self:flex-end\">Guardar</button>\n    </div>\n  </div>\n  <div class=\"card\">\n    <h2>Entrantes de hoy: <span id=\"en-hoy\">0</span></h2>\n    <div class=\"meta\" id=\"en-resumen\"></div>\n    <div id=\"en-list\" style=\"margin-top:8px\"></div>\n  </div>\n  <div class=\"card\">\n    <h2>Resumen por día</h2>\n    <div id=\"en-dias\"></div>\n  </div>\n</section>\n\n<!-- EXPORTAR -->\n<section id=\"tab-exportar\" class=\"hidden\">\n  <div class=\"card\">\n    <h2>Exportar a Google Sheets</h2>\n    <p class=\"meta\">Cada hoja se copia en su pestaña. Copia la hoja y pégala en Google Sheets, o descarga el CSV e impórtalo.</p>\n    <div class=\"card\">\n      <h2>Resumen del día</h2>\n      <p class=\"meta\">Copia este texto y pégalo en un solo documento.</p>\n      <textarea id=\"res-texto\" rows=\"11\" readonly></textarea>\n      <div style=\"margin-top:8px\"><button class=\"primary\" id=\"res-copiar\">Copiar resumen</button></div>\n      <div class=\"row\" style=\"margin-top:10px\">\n        <button class=\"primary\" data-xl=\"dia\">Excel del día</button>\n        <button class=\"primary\" data-xl=\"semana\">Excel de la semana</button>\n        <button data-xl=\"todo\">Excel completo</button>\n      </div>\n      <div style=\"margin-top:10px\"><button id=\"json-bk\">Descargar respaldo .json</button></div>\n      <div style=\"margin-top:8px\"><label class=\"meta\">Restaurar desde respaldo .json <input id=\"json-rs\" type=\"file\" accept=\".json,application/json\"></label></div>\n    </div>\n    <div id=\"exp-list\"></div>\n  </div>\n</section>\n</main>";
 
 export function estadoVacio(){
   return {
@@ -16,6 +20,7 @@ export function estadoVacio(){
 export function initGestion(initialState, onSave){
 const DIAS_LIMITE = 30;
 let calEditId = null, cierreConfId = null, cierreEditId = null, errCat = null, perdidoEditId = null, perdidoConfId = null;
+let calBuscar = "", cieBuscar = "";
 
 const hoyISO = () => new Date().toISOString().slice(0,10);
 const ahora = () => new Date().toLocaleString("es", {hour:"2-digit", minute:"2-digit"});
@@ -27,6 +32,16 @@ const sumarDias = (f, n) => { const d = new Date(f + "T00:00:00"); d.setDate(d.g
 const fmt = f => { if (!f) return "sin fecha"; const [y,m,d] = f.split("-"); return `${d}/${m}/${y}`; };
 const money = n => Number(n || 0).toLocaleString("es", {minimumFractionDigits:0, maximumFractionDigits:2});
 const neto = c => { const p = parseFloat(String(c.descuento || "").replace(",", ".")); const pct = isNaN(p) ? 0 : p; return Math.round((c.monto || 0) * (1 - pct / 100) * 100) / 100; };
+/* Búsqueda por nombre: ignora mayúsculas y tildes */
+const norm = s => String(s ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const coincide = (nombre, q) => !norm(q) || norm(nombre).includes(norm(q));
+function avisarBusqueda(id, q, total, match){
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (!norm(q)) { el.classList.add("hidden"); el.textContent = ""; return; }
+  el.classList.remove("hidden");
+  el.textContent = `Coinciden ${match} de ${total}`;
+}
 
 let state = {
   cats: ["Registro por error","Cuelga el teléfono","No atiende llamada","Calificado en marcación"],
@@ -59,6 +74,18 @@ document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
   ["errores","calificados","cierres","comisiones","entrantes","exportar"].forEach(t => document.getElementById("tab-"+t).classList.toggle("hidden", t !== b.dataset.tab));
   renderAll();
 });
+
+/* CAMPOS DE BÚSQUEDA */
+function activarBuscar(inpId, set, reRender){
+  const inp = document.getElementById(inpId), btn = document.getElementById(inpId + "-x");
+  if (!inp || !btn) return;
+  const escribir = v => { set(v); btn.classList.toggle("hidden", !v); reRender(); };
+  inp.oninput = () => escribir(inp.value);
+  inp.onkeydown = e => { if (e.key === "Escape") { inp.value = ""; escribir(""); } };
+  btn.onclick = () => { inp.value = ""; escribir(""); inp.focus(); };
+}
+activarBuscar("cal-buscar", v => { calBuscar = v; }, renderCalificados);
+activarBuscar("cie-buscar", v => { cieBuscar = v; }, renderCierres);
 
 /* ERRORES */
 function renderCats(){
@@ -151,9 +178,11 @@ function renderCalificados(){
   revisarVencidos();
   const hoy = hoyISO();
   const act = state.calificados.slice().sort((a,b) => (a.estado ? 1 : 0) - (b.estado ? 1 : 0) || a.fecha.localeCompare(b.fecha));
+  const calVis = act.filter(c => coincide(c.nombre, calBuscar));
   document.getElementById("cal-count").textContent = act.filter(c => !c.estado).length + " pendientes";
   document.getElementById("cal-hoy").textContent = contarCalificados(hoy);
-  document.getElementById("cal-list").innerHTML = act.length ? act.map(c => {
+  avisarBusqueda("cal-match", calBuscar, act.length, calVis.length);
+  document.getElementById("cal-list").innerHTML = calVis.length ? calVis.map(c => {
     const dias = diasEntre(c.fecha, hoy);
     const restantes = DIAS_LIMITE - dias;
     if (c.estado) return `
@@ -206,7 +235,7 @@ function renderCalificados(){
         <button class="small" data-editc="${c.id}">Editar</button>
         <button class="small" data-delc="${c.id}">Eliminar</button>
       </div>
-    </div>`;}).join("") : `<p class="empty">No hay calificados pendientes.</p>`;
+    </div>`;}).join("") : (calBuscar ? `<p class="empty">Nadie coincide con «${esc(calBuscar)}».</p>` : `<p class="empty">No hay calificados pendientes.</p>`);
 
   document.querySelectorAll("[data-pagado]").forEach(b => b.onclick = () => { cierreConfId = b.dataset.pagado; renderCalificados(); });
   document.querySelectorAll("[data-cancelar-conf]").forEach(b => b.onclick = () => { cierreConfId = null; renderCalificados(); });
@@ -270,7 +299,10 @@ function renderCierres(){
   document.getElementById("tot-mes").textContent = `Este mes: ${money(totalMes)} (${state.cierres.filter(c => c.fechaCierre.startsWith(mes)).length} cierres)`;
   document.getElementById("tot-todos").textContent = `Total histórico: ${money(totalTodos)} (${state.cierres.length} cierres)`;
   document.getElementById("cie-count").textContent = state.cierres.length;
-  document.getElementById("cie-list").innerHTML = state.cierres.length ? state.cierres.slice().reverse().map(c => {
+  const gVis = state.cierres.filter(c => coincide(c.nombre, cieBuscar));
+  const pVis = state.perdidos.filter(p => coincide(p.nombre || p.plan, cieBuscar));
+  avisarBusqueda("cie-match", cieBuscar, state.cierres.length + state.perdidos.length, gVis.length + pVis.length);
+  document.getElementById("cie-list").innerHTML = gVis.length ? gVis.slice().reverse().map(c => {
     const edit = cierreEditId === c.id ? `
       <div class="inline">
         <div class="row">
@@ -304,7 +336,7 @@ function renderCierres(){
         ${edit}
       </div>
       <div><button class="small" data-editar-cierre="${c.id}">Editar</button></div>
-    </div>`;}).join("") : `<p class="empty">Aún no hay cierres.</p>`;
+    </div>`;}).join("") : (cieBuscar ? `<p class="empty">Nadie coincide con «${esc(cieBuscar)}».</p>` : `<p class="empty">Aún no hay cierres.</p>`);
 
   document.querySelectorAll("[data-editar-cierre]").forEach(b => b.onclick = () => { cierreEditId = b.dataset.editarCierre; renderCierres(); });
   document.querySelectorAll("[data-cancelar-cierre]").forEach(b => b.onclick = () => { cierreEditId = null; renderCierres(); });
@@ -335,7 +367,7 @@ function renderCierres(){
   });
 
   document.getElementById("per-count").textContent = state.perdidos.length;
-  document.getElementById("per-list").innerHTML = state.perdidos.length ? state.perdidos.slice().reverse().map(p => {
+  document.getElementById("per-list").innerHTML = pVis.length ? pVis.slice().reverse().map(p => {
     const confForm = perdidoConfId === p.id ? `
       <div class="inline">
         <div class="row">
@@ -379,7 +411,7 @@ function renderCierres(){
         <button class="small" data-pe="${p.id}">Editar</button>
         <button class="small" data-pd="${p.id}">Eliminar</button>
       </div>
-    </div>`;}).join("") : `<p class="empty">Sin cierres perdidos.</p>`;
+    </div>`;}).join("") : (cieBuscar ? `<p class="empty">Nadie coincide con «${esc(cieBuscar)}».</p>` : `<p class="empty">Sin cierres perdidos.</p>`);
 
   document.querySelectorAll("[data-pc]").forEach(b => b.onclick = () => { perdidoConfId = b.dataset.pc; perdidoEditId = null; renderCierres(); });
   document.querySelectorAll("[data-pc-cancelar]").forEach(b => b.onclick = () => { perdidoConfId = null; renderCierres(); });

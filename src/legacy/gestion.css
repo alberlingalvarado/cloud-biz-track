@@ -31,3 +31,8 @@ a { color:var(--brand); word-break:break-all; }
 .notas { margin-top:8px; }
 .nota { font-size:13px; padding:4px 0; border-top:1px dashed var(--line); }
 .inline { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px; margin-top:8px; width:100%; }
+.buscar { display:flex; align-items:center; gap:8px; margin-top:10px; }
+.buscar svg { flex:0 0 auto; color:var(--muted); }
+.buscar input { flex:1; min-width:0; }
+.buscar button { flex:0 0 auto; }
+.buscar + .meta { margin:6px 0 0; }
