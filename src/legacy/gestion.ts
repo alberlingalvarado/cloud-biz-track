@@ -534,7 +534,7 @@ function sheetsFor(){
   const sheets = {};
   state.cats.forEach(c => {
     const rows = state.errores.filter(e => e.categoria === c).map(e => [e.fecha, e.hora, e.link, e.campana || "", e.nota]);
-    sheets[c] = {headers:["Fecha","Hora","Link contacto / HubSpot","Nota"], rows};
+    sheets[c] = {headers:["Fecha","Hora","Link contacto / HubSpot","Campaña","Nota"], rows};
   });
   sheets["Calificados"] = {headers:["Fecha calificación","Nombre cliente","Link contacto","HubSpot negocio","Fecha pago tentativo","Plan","Recordatorio","Notas de seguimiento"],
     rows: state.calificados.slice().sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(c => [c.fecha, c.nombre || "", c.link, c.hubspot, c.pagoFecha, c.plan, c.recordatorio, (c.notas || []).map(n => fmt(n.fecha) + ": " + n.texto).join(" | ")])};
