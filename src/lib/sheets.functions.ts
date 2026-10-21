@@ -15,7 +15,9 @@ const CABECERAS_RESUMEN = [
   "Errores de marcación", "Llamadas entrantes", "Soporte", "Sales", "Llamadas realizadas", "Minutos en cola",
 ];
 
-type Registro = Record<string, any>;
+/* Las filas llegan tal cual de la base de datos, así que se leen con acceso libre. */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type Registro = any;
 type Estado = {
   errores: Registro[];
   calificados: Registro[];
