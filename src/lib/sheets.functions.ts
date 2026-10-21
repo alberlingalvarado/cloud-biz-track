@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const GATEWAY = "https://connector-gateway.lovable.dev/google_sheets/v4";
 const HOJA_MAESTRO = "Maestro";
-const HOJA_RESUMEN = "Resumen diario";
+const HOJA_RESUMEN = "Resumen_diario";
 
 const CABECERAS = [
   "Fecha", "Agente", "Correo", "Tipo", "Nombre / categoría", "Link contacto", "Link HubSpot",
