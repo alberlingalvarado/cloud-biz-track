@@ -51,7 +51,18 @@ const notasTxt = (arr: unknown) =>
   (Array.isArray(arr) ? arr : []).map((n: any) => `${fmtFecha(n.fecha)}: ${txt(n.texto)}`).join(" | ");
 const colaTxt = (min: number) => `${Math.floor((min || 0) / 60)}h ${(min || 0) % 60}m`;
 
-/* "alberling.alvarado@alegra.com" -> "Alberling_alvarado". Sin espacios: la hoja
+/* Nombre legible para la columna "Agente": "alberling.alvarado@..." -> "Alberling Alvarado" */
+function mostrarNombre(email: string) {
+  const local = txt(email).split("@")[0] || "";
+  return local
+    .split(/[._\-+]+/)
+    .filter(Boolean)
+    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+    .join(" ")
+    .slice(0, 60);
+}
+
+/* "alberling.alvarado@alegra.com" -> "alberling_alvarado". Sin espacios: la hoja
    no los acepta cuando se escribe por la API. */
 function nombreDesdeCorreo(email: string) {
   const local = txt(email).split("@")[0] || "agente";
@@ -232,12 +243,13 @@ export const sincronizarSheets = createServerFn({ method: "POST" })
         const base = nombreDesdeCorreo(correo);
         const veces = (usados.get(base) || 0) + 1;
         usados.set(base, veces);
-        const agente = veces === 1 ? base : `${base}_${veces}`;
+        const titulo = veces === 1 ? base : `${base}_${veces}`;
+        const nombre = mostrarNombre(correo) || titulo;
         const e = leerEstado(fila);
-        const filas = filasDeAgente(e, agente, correo);
+        const filas = filasDeAgente(e, nombre, correo);
         maestro.push(...filas);
-        porAgente.set(agente, filas);
-        resumen.push(...resumenDeAgente(e, agente, correo));
+        porAgente.set(titulo, filas);
+        resumen.push(...resumenDeAgente(e, nombre, correo));
       }
 
       maestro.sort((a, b) => String(a[0]).localeCompare(String(b[0])));
