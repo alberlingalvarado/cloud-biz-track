@@ -154,9 +154,24 @@ function App({ userId, email }: { userId: string; email: string }) {
     return await enviar();
   };
 
+  // Aviso dentro de la tarjeta de Google Sheets, sin recargar nada.
+  const avisa = (r: unknown) => {
+    const t = document.getElementById("gs-estado");
+    const x = r as { ok?: boolean; filas?: number; agentes?: number };
+    if (t && x.ok) {
+      const n = x.agentes ?? 0;
+      t.textContent = `Actualizado en Google Sheets: ${x.filas ?? 0} filas de ${n} ${n === 1 ? "agente" : "agentes"}.`;
+    }
+  };
+
   useEffect(() => {
     supabase.from("gestion_datos").select("*").eq("user_id", userId).maybeSingle().then(({ data }) => {
-      if (data) { datos.current = deFila(data); setFase("lista"); }
+      if (data) {
+        datos.current = deFila(data);
+        setFase("lista");
+        // Al abrir la app se manda el día a Google Sheets sin que nadie lo pida.
+        onSync().then(avisa).catch(() => {});
+      }
       else setFase("primera");
     });
     supabase.from("sheets_config").select("spreadsheet_url").eq("id", 1).maybeSingle()
