@@ -4,6 +4,8 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import "@/legacy/gestion.css";
 import { MARKUP as MARKUP_HTML, initGestion, estadoVacio } from "@/legacy/gestion";
+import { useServerFn } from "@tanstack/react-start";
+import { sincronizarSheets } from "@/lib/sheets.functions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -118,6 +120,8 @@ function Acceso() {
 
 function App({ userId, email }: { userId: string; email: string }) {
   const [fase, setFase] = useState<"cargando" | "primera" | "lista">("cargando");
+  const [urlMaestro, setUrlMaestro] = useState("");
+  const enviar = useServerFn(sincronizarSheets);
   const datos = useRef<Estado>({});
   const iniciado = useRef(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -138,12 +142,25 @@ function App({ userId, email }: { userId: string; email: string }) {
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => { const p = pendiente.current; pendiente.current = null; if (p) guardar(p); }, 500);
   };
+  // Antes de enviar a Google Sheets se escribe lo que quede pendiente, para que
+  // la hoja refleje exactamente lo que se ve en pantalla.
+  const onSync = async () => {
+    const p = pendiente.current;
+    if (p) {
+      pendiente.current = null;
+      if (timer.current) clearTimeout(timer.current);
+      await guardar(p);
+    }
+    return await enviar();
+  };
 
   useEffect(() => {
     supabase.from("gestion_datos").select("*").eq("user_id", userId).maybeSingle().then(({ data }) => {
       if (data) { datos.current = deFila(data); setFase("lista"); }
       else setFase("primera");
     });
+    supabase.from("sheets_config").select("spreadsheet_url").eq("id", 1).maybeSingle()
+      .then(({ data }) => setUrlMaestro(data?.spreadsheet_url ?? ""));
     const flush = () => { const p = pendiente.current; if (p) { pendiente.current = null; guardar(p); } };
     window.addEventListener("beforeunload", flush);
     return () => window.removeEventListener("beforeunload", flush);
@@ -156,7 +173,7 @@ function App({ userId, email }: { userId: string; email: string }) {
     nodo.dataset["listo"] = "1";
     nodo.innerHTML = MARKUP_HTML;
     iniciado.current = true;
-    initGestion(datos.current, onSave);
+    initGestion(datos.current, onSave, { onSync, sheetsUrl: urlMaestro });
   };
 
   const empezar = async (inicial: Estado) => {
