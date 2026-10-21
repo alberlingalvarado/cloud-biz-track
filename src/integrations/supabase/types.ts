@@ -56,6 +56,27 @@ export type Database = {
         }
         Relationships: []
       }
+      sheets_config: {
+        Row: {
+          created_at: string
+          id: number
+          spreadsheet_id: string
+          spreadsheet_url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          spreadsheet_id: string
+          spreadsheet_url: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          spreadsheet_id?: string
+          spreadsheet_url?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
