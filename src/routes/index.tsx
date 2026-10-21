@@ -176,6 +176,13 @@ function App({ userId, email }: { userId: string; email: string }) {
     initGestion(datos.current, onSave, { onSync, sheetsUrl: urlMaestro });
   };
 
+  // El enlace vive dentro de la interfaz antigua, así que se actualiza a mano
+  // cuando la dirección del documento maestro llega después de abrir la app.
+  useEffect(() => {
+    const a = document.getElementById("gs-abrir");
+    if (a && urlMaestro) a.href = urlMaestro;
+  }, [urlMaestro, fase]);
+
   const empezar = async (inicial: Estado) => {
     const s = { ...estadoVacio(), ...inicial, config: { ...estadoVacio().config, ...(inicial.config || {}) } };
     await guardar(s);
