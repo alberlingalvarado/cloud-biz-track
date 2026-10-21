@@ -31,6 +31,10 @@ const num = (v: unknown) => Number(v ?? 0) || 0;
 const txt = (v: unknown) => (v === null || v === undefined ? "" : String(v));
 const redondeo = (n: number) => Math.round(n * 100) / 100;
 
+/* Ninguna fila puede escribirse más allá de la última columna de su cabecera */
+const cuadrar = (f: (string | number)[][], n: number) =>
+  f.map((r) => (r.length === n ? r : [...r.slice(0, n), ...Array(Math.max(0, n - r.length)).fill("")]));
+
 /* Mismo cálculo que la app: monto menos el descuento escrito en la fila */
 const neto = (c: Registro) => {
   const p = parseFloat(String(c.descuento ?? "").replace(",", "."));
@@ -85,7 +89,7 @@ function filasDeAgente(e: Estado, agente: string, correo: string) {
 
   e.errores.forEach((x) =>
     filas.push([
-      ...base(x.fecha, "Error de marcación"), txt(x.categoria), txt(x.link), "", "", "", "", "", "", "", "", "",
+      ...base(x.fecha, "Error de marcación"), txt(x.categoria), txt(x.link), "", "", "", "", "", "", "", "",
       `Hora ${txt(x.hora)}${x.campana ? ` · Campaña: ${txt(x.campana)}` : ""}${x.nota ? ` · ${txt(x.nota)}` : ""}`, "",
     ]),
   );
@@ -116,14 +120,14 @@ function filasDeAgente(e: Estado, agente: string, correo: string) {
 
   e.entrantes.forEach((x) =>
     filas.push([
-      ...base(x.fecha, "Llamada entrante"), txt(x.tipo), txt(x.link), "", "", "", "", "", "", "", "", "",
+      ...base(x.fecha, "Llamada entrante"), txt(x.tipo), txt(x.link), "", "", "", "", "", "", "", "",
       `En cola ${colaTxt(num(x.colaMin))}`, "",
     ]),
   );
 
   Object.keys(e.llamadasRealizadas || {}).forEach((f) =>
     filas.push([
-      ...base(f, "Llamadas realizadas"), "", "", "", "", "", "", "", "", "", "", "", `Total: ${num(e.llamadasRealizadas[f])}`, "",
+      ...base(f, "Llamadas realizadas"), "", "", "", "", "", "", "", "", "", "", `Total: ${num(e.llamadasRealizadas[f])}`, "",
     ]),
   );
 
@@ -248,9 +252,12 @@ export const sincronizarSheets = createServerFn({ method: "POST" })
       }
 
       const bloques = [
-        { titulo: HOJA_MAESTRO, filas: [CABECERAS, ...maestro] },
-        { titulo: HOJA_RESUMEN, filas: [CABECERAS_RESUMEN, ...resumen] },
-        ...[...porAgente.entries()].map(([titulo, filas]) => ({ titulo, filas: [CABECERAS, ...filas] })),
+        { titulo: HOJA_MAESTRO, filas: [CABECERAS, ...cuadrar(maestro, CABECERAS.length)] },
+        { titulo: HOJA_RESUMEN, filas: [CABECERAS_RESUMEN, ...cuadrar(resumen, CABECERAS_RESUMEN.length)] },
+        ...[...porAgente.entries()].map(([titulo, filas]) => ({
+          titulo,
+          filas: [CABECERAS, ...cuadrar(filas, CABECERAS.length)],
+        })),
       ];
 
       await sheets(`/spreadsheets/${id}/values:batchUpdate`, "POST", {
