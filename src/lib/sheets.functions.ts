@@ -51,15 +51,16 @@ const notasTxt = (arr: unknown) =>
   (Array.isArray(arr) ? arr : []).map((n: any) => `${fmtFecha(n.fecha)}: ${txt(n.texto)}`).join(" | ");
 const colaTxt = (min: number) => `${Math.floor((min || 0) / 60)}h ${(min || 0) % 60}m`;
 
-/* "alberling.alvarado@alegra.com" -> "Alberling Alvarado" (válida como nombre de pestaña) */
+/* "alberling.alvarado@alegra.com" -> "Alberling_alvarado". Sin espacios: la hoja
+   no los acepta cuando se escribe por la API. */
 function nombreDesdeCorreo(email: string) {
-  const local = txt(email).split("@")[0] || "Agente";
+  const local = txt(email).split("@")[0] || "agente";
   const nombre = local
-    .split(/[._\-+]+/)
-    .filter(Boolean)
-    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-    .join(" ");
-  return (nombre.replace(/[:\\/?[\]*]/g, " ").slice(0, 31).trim()) || "Agente";
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Za-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return nombre.slice(0, 60) || "agente";
 }
 
 function leerEstado(fila: Registro): Estado {
@@ -194,7 +195,7 @@ const letra = (n: number) => {
   return s;
 };
 const rango = (titulo: string, filas: number, columnas: number) =>
-  `${cotizar(titulo)}!A1:${letra(columnas)}${Math.max(filas, 1)}`.replace(/ /g, "%20");
+  `${cotizar(titulo)}!A1:${letra(columnas)}${Math.max(filas, 1)}`;
 
 export const sincronizarSheets = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -212,7 +213,8 @@ export const sincronizarSheets = createServerFn({ method: "POST" })
       const [datos, usuarios] = await Promise.all([
         supabaseAdmin
           .from("gestion_datos")
-          .select("user_id, errores, calificados, cierres, perdidos, entrantes, llamadas_realizadas"),
+          .select("user_id, errores, calificados, cierres, perdidos, entrantes, llamadas_realizadas")
+          .order("user_id"),
         supabaseAdmin.auth.admin.listUsers({ perPage: 1000 }),
       ]);
 
@@ -224,9 +226,13 @@ export const sincronizarSheets = createServerFn({ method: "POST" })
       const resumen: (string | number)[][] = [];
       const porAgente = new Map<string, (string | number)[][]>();
 
+      const usados = new Map<string, number>();
       for (const fila of datos.data || []) {
         const correo = correos.get(fila.user_id) || "";
-        const agente = nombreDesdeCorreo(correo);
+        const base = nombreDesdeCorreo(correo);
+        const veces = (usados.get(base) || 0) + 1;
+        usados.set(base, veces);
+        const agente = veces === 1 ? base : `${base}_${veces}`;
         const e = leerEstado(fila);
         const filas = filasDeAgente(e, agente, correo);
         maestro.push(...filas);
