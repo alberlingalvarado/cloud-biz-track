@@ -169,7 +169,7 @@ async function sheets(path: string, method: "GET" | "POST", body?: unknown) {
       "X-Connection-Api-Key": clave,
       "Content-Type": "application/json",
     },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined ? null : JSON.stringify(body),
   });
   if (!respuesta.ok) {
     const detalle = await respuesta.text();
@@ -209,7 +209,7 @@ export const sincronizarSheets = createServerFn({ method: "POST" })
         supabaseAdmin
           .from("gestion_datos")
           .select("user_id, errores, calificados, cierres, perdidos, entrantes, llamadas_realizadas"),
-        supabaseAdmin.auth.admin.listUsers({ pageSize: 1000 }),
+        supabaseAdmin.auth.admin.listUsers({ perPage: 1000 }),
       ]);
 
       const correos = new Map<string, string>(

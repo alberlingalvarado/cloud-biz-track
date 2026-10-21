@@ -179,7 +179,7 @@ function App({ userId, email }: { userId: string; email: string }) {
   // El enlace vive dentro de la interfaz antigua, así que se actualiza a mano
   // cuando la dirección del documento maestro llega después de abrir la app.
   useEffect(() => {
-    const a = document.getElementById("gs-abrir");
+    const a = document.getElementById("gs-abrir") as HTMLAnchorElement | null;
     if (a && urlMaestro) a.href = urlMaestro;
   }, [urlMaestro, fase]);
 
