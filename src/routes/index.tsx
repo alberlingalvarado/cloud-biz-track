@@ -76,7 +76,7 @@ function Index() {
 
 
 function Acceso() {
-  const [modo, setModo] = useState<"entrar" | "registro">("entrar");
+  const [modo, setModo] = useState<"entrar" | "registro" | "olvido">("entrar");
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [msg, setMsg] = useState("");
@@ -84,31 +84,45 @@ function Acceso() {
   const enviar = async (e: React.FormEvent) => {
     e.preventDefault();
     setMsg(""); setCargando(true);
+    const correo = email.trim().toLowerCase();
     if (modo === "entrar") {
-      const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
-      if (error) setMsg("Correo o contraseña incorrectos.");
+      const { error } = await supabase.auth.signInWithPassword({ email: correo, password: pass });
+      if (error) setMsg("Correo o contraseña incorrectos. Si no recuerdas la contraseña, usa “¿Olvidaste tu contraseña?”.");
+    } else if (modo === "olvido") {
+      const { error } = await supabase.auth.resetPasswordForEmail(correo, { redirectTo: `${window.location.origin}/reset-password` });
+      setMsg(error ? "No se pudo enviar el correo. Intenta de nuevo en un minuto." : "Te enviamos un correo con un enlace para crear una nueva contraseña. Revisa también la carpeta de spam.");
     } else {
-      const { data, error } = await supabase.auth.signUp({ email, password: pass, options: { emailRedirectTo: window.location.origin } });
+      const { data, error } = await supabase.auth.signUp({ email: correo, password: pass, options: { emailRedirectTo: window.location.origin } });
       if (error) setMsg(error.message);
       else if (!data.session) setMsg("Revisa tu correo para confirmar la cuenta y luego inicia sesión.");
     }
     setCargando(false);
   };
+  const cambiar = (m: typeof modo) => (e: React.MouseEvent) => { e.preventDefault(); setMsg(""); setModo(m); };
   return (
     <>
       <header><h1>Gestión diaria</h1></header>
       <main style={{ maxWidth: 420 }}>
         <form className="card" onSubmit={enviar}>
-          <h2>{modo === "entrar" ? "Iniciar sesión" : "Crear cuenta"}</h2>
+          <h2>{modo === "entrar" ? "Iniciar sesión" : modo === "olvido" ? "Recuperar contraseña" : "Crear cuenta"}</h2>
           <div className="row"><input type="email" required placeholder="Correo" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-          <div className="row" style={{ marginTop: 8 }}><input type="password" required minLength={6} placeholder="Contraseña" value={pass} onChange={(e) => setPass(e.target.value)} /></div>
+          {modo !== "olvido" && (
+            <div className="row" style={{ marginTop: 8 }}><input type="password" required minLength={6} placeholder="Contraseña" value={pass} onChange={(e) => setPass(e.target.value)} /></div>
+          )}
           {msg && <p className="meta" style={{ marginTop: 8 }}>{msg}</p>}
           <div className="row" style={{ marginTop: 10 }}>
-            <button className="primary" type="submit" disabled={cargando}>{modo === "entrar" ? "Entrar" : "Crear cuenta"}</button>
+            <button className="primary" type="submit" disabled={cargando}>
+              {modo === "entrar" ? "Entrar" : modo === "olvido" ? "Enviar enlace" : "Crear cuenta"}
+            </button>
           </div>
+          {modo === "entrar" && (
+            <p className="meta" style={{ marginTop: 10 }}>
+              <a href="#" onClick={cambiar("olvido")}>¿Olvidaste tu contraseña?</a>
+            </p>
+          )}
           <p className="meta" style={{ marginTop: 10 }}>
             {modo === "entrar" ? "¿No tienes cuenta? " : "¿Ya tienes cuenta? "}
-            <a href="#" onClick={(e) => { e.preventDefault(); setMsg(""); setModo(modo === "entrar" ? "registro" : "entrar"); }}>
+            <a href="#" onClick={cambiar(modo === "entrar" ? "registro" : "entrar")}>
               {modo === "entrar" ? "Crear cuenta" : "Iniciar sesión"}
             </a>
           </p>
