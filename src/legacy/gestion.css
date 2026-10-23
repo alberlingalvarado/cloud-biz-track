@@ -36,3 +36,5 @@ a { color:var(--brand); word-break:break-all; }
 .buscar input { flex:1; min-width:0; }
 .buscar button { flex:0 0 auto; }
 .buscar + .meta { margin:6px 0 0; }
+.dia-cab { font-weight:700; padding:12px 0 4px; border-top:2px solid var(--line); margin-top:6px; }
+.dia-cab:first-child { border-top:none; margin-top:0; }
