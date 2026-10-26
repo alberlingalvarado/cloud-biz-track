@@ -142,19 +142,34 @@ function App({ userId, email }: { userId: string; email: string }) {
   const pendiente = useRef<Estado | null>(null);
   const aviso = useRef<HTMLSpanElement | null>(null);
 
-  // El aviso se escribe directo en el DOM: así la app no se vuelve a dibujar
-  // al guardar y nunca se pierden los botones de las pestañas.
-  const setAviso = (t: string) => { if (aviso.current) aviso.current.textContent = t ? " · " + t : ""; };
+  // El aviso se escribe directo en el DOM con colores de estado
+  const setAviso = (t: string, error = false) => {
+    if (aviso.current) {
+      aviso.current.textContent = t ? " · " + t : "";
+      aviso.current.style.color = error ? "var(--danger, #f87171)" : t.includes("Guardando") ? "var(--warn, #fbbf24)" : "var(--brand, #2dd4bf)";
+    }
+  };
 
   const guardar = async (s: Estado) => {
-    setAviso("Guardando…");
+    setAviso("Guardando en la nube…");
     const { error } = await supabase.from("gestion_datos").upsert(aFila(s, userId) as any);
-    setAviso(error ? "No se pudo guardar en la nube" : "Guardado en la nube");
+    if (error) {
+      console.error("Error al guardar en Supabase:", error);
+      setAviso("Error al guardar en la nube", true);
+    } else {
+      setAviso("Guardado en la nube");
+    }
   };
-  const onSave = (s: Estado) => {
+  const onSave = (s: Estado, inmediato = false) => {
     pendiente.current = JSON.parse(JSON.stringify(s));
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => { const p = pendiente.current; pendiente.current = null; if (p) guardar(p); }, 500);
+    if (inmediato) {
+      const p = pendiente.current;
+      pendiente.current = null;
+      guardar(p);
+    } else {
+      timer.current = setTimeout(() => { const p = pendiente.current; pendiente.current = null; if (p) guardar(p); }, 300);
+    }
   };
   // Antes de enviar a Google Sheets se escribe lo que quede pendiente, para que
   // la hoja refleje exactamente lo que se ve en pantalla.
